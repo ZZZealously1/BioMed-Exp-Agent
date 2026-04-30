@@ -1,0 +1,154 @@
+# Open Field Protocol v2.1
+# 旷场实验协议定义
+
+name: open_field
+version: "2.1"
+description: |
+  旷场实验 (Open Field Test) 用于评估实验动物的自主活动能力和焦虑状态。
+  通过分析动物在开放场地中的运动轨迹，计算中心区域停留时间、总移动距离等指标。
+
+species:
+  - mouse
+  - rat
+
+# 实验参数
+parameters:
+  duration:
+    type: float
+    unit: seconds
+    default: 300
+    min: 60
+    max: 1800
+    description: "实验时长"
+
+  arena_size:
+    type: dict
+    required: true
+    properties:
+      width:
+        type: float
+        unit: cm
+        min: 30
+        max: 100
+      height:
+        type: float
+        unit: cm
+        min: 30
+        max: 100
+    description: "场地尺寸"
+
+  center_ratio:
+    type: float
+    default: 0.3
+    min: 0.2
+    max: 0.5
+    description: "中心区域占场地的比例"
+
+  lighting:
+    type: string
+    default: normal
+    enum: [low, normal, high]
+    description: "光照条件"
+
+# 计算指标
+metrics:
+  center_time:
+    type: float
+    unit: percent
+    description: "中心区域停留时间占比"
+    range: [0, 100]
+
+  total_distance:
+    type: float
+    unit: cm
+    description: "总移动距离"
+    min: 0
+
+  avg_speed:
+    type: float
+    unit: cm/s
+    description: "平均移动速度"
+    min: 0
+
+  max_speed:
+    type: float
+    unit: cm/s
+    description: "最大移动速度"
+    min: 0
+
+  rearing_count:
+    type: integer
+    description: "站立次数"
+    min: 0
+
+  grooming_time:
+    type: float
+    unit: seconds
+    description: "理毛时间"
+    min: 0
+
+# 约束 (建议满足)
+hard_constraints:
+  - name: duration_valid
+    condition: "parameters.duration >= 60 and parameters.duration <= 1800"
+    message: "实验时长必须在 60-1800 秒之间"
+
+  - name: arena_size_valid
+    condition: "parameters.arena_size.width >= 30 and parameters.arena_size.height >= 30"
+    message: "场地尺寸必须至少 30x30 cm"
+
+  - name: detection_rate_sufficient
+    condition: "quality.detection_rate >= 0.8"
+    message: "检测率必须 >= 80%"
+
+  - name: tracking_continuous
+    condition: "quality.track_continuity >= 0.7"
+    message: "跟踪连续性必须 >= 70%"
+
+soft_constraints:
+  - name: center_ratio_appropriate
+    condition: "parameters.center_ratio >= 0.25 and parameters.center_ratio <= 0.4"
+    message: "建议中心区域比例在 25%-40% 之间"
+    severity: warning
+
+  - name: detection_rate_optimal
+    condition: "quality.detection_rate >= 0.9"
+    message: "建议检测率达到 90% 以上"
+    severity: info
+
+# 数据质量要求
+quality_requirements:
+  detection_rate:
+    min: 0.8
+    recommended: 0.9
+
+  track_continuity:
+    min: 0.7
+    recommended: 0.85
+
+  min_tracking_duration:
+    value: 0.8
+    description: "至少 80% 的实验时间有有效跟踪"
+
+# 结果解释
+interpretation:
+  anxiety_levels:
+    low_anxiety:
+      condition: "metrics.center_time >= 40"
+      description: "低焦虑：动物在中心区域探索较多"
+
+    moderate_anxiety:
+      condition: "metrics.center_time >= 20 and metrics.center_time < 40"
+      description: "中等焦虑：动物表现出一定程度的焦虑"
+
+    high_anxiety:
+      condition: "metrics.center_time < 20"
+      description: "高焦虑：动物主要在边缘区域活动"
+
+# 参考文献
+references:
+  - authors: ["Prut L", "Belzung C"]
+    title: "The open field test: do we need it?"
+    journal: "Behavioural Brain Research"
+    year: 2003
+    doi: "10.1016/S0166-4328(02)00270-2"

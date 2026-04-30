@@ -1,0 +1,140 @@
+name: "worm_assay"
+display_name: "线虫行为分析"
+description: "秀丽隐杆线虫 (C. elegans) 运动行为与神经表型分析协议"
+version: "1.0.0"
+
+parameters:
+  plate_diameter:
+    type: float
+    default: 60.0
+    unit: mm
+    description: "培养皿直径"
+  temperature:
+    type: float
+    default: 20.0
+    unit: "°C"
+    description: "实验环境温度"
+  duration:
+    type: float
+    default: 60.0
+    unit: s
+    description: "视频录制时长"
+
+species:
+  - worm
+
+metrics:
+  avg_speed:
+    name: "平均速度"
+    unit: mm/s
+    description: "线虫爬行平均速度"
+    direction: "higher_is_better"
+    reference_range: [0.1, 0.4]
+
+  max_speed:
+    name: "最大速度"
+    unit: mm/s
+    description: "线虫爬行最大瞬时速度"
+    direction: "higher_is_better"
+
+  immobile_time_percent:
+    name: "静止时间占比"
+    unit: "%"
+    description: "速度低于阈值的帧数占比"
+    direction: "lower_is_better"
+    reference_range: [0, 30]
+
+  avg_body_length:
+    name: "平均体长"
+    unit: mm
+    description: "基于骨架中心线的平均体长"
+    direction: "neutral"
+    reference_range: [0.8, 1.2]
+
+  avg_body_width:
+    name: "平均体宽"
+    unit: mm
+    description: "基于距离变换的平均体宽"
+    direction: "neutral"
+    reference_range: [0.05, 0.08]
+
+  body_bend_frequency:
+    name: "身体弯曲频率"
+    unit: Hz
+    description: "正弦爬行时的身体摆动频率"
+    direction: "neutral"
+    reference_range: [0.3, 0.8]
+
+  body_wavelength_mean:
+    name: "平均弯曲波长"
+    unit: mm
+    description: "身体正弦波的平均水平波长"
+    direction: "neutral"
+    reference_range: [0.3, 0.6]
+
+  omega_turn_count:
+    name: "Omega turn 次数"
+    unit: "次"
+    description: "剧烈方向反转行为次数"
+    direction: "neutral"
+    reference_range: [0, 5]
+
+  total_distance:
+    name: "总移动距离"
+    unit: mm
+    description: "实验期间的总爬行距离"
+    direction: "higher_is_better"
+
+constraints:
+  hard:
+    detection_rate:
+      operator: ">="
+      value: 0.85
+      message: "检测率不足 85%，请检查视频质量或线虫可见性"
+    segmentation_iou:
+      operator: ">="
+      value: 0.75
+      message: "SAM 分割质量不足，建议调整光照或减少遮挡"
+  soft:
+    track_continuity:
+      operator: ">="
+      value: 0.80
+      message: "跟踪连续性偏低，可能导致轨迹断裂"
+
+interpretation:
+  activity_levels:
+    - name: "运动能力低下"
+      condition: "avg_speed_mm_s < 0.1"
+      meaning: "线虫移动极慢，可能存在运动神经元功能障碍或药物抑制作用"
+    - name: "运动能力正常"
+      condition: "avg_speed_mm_s >= 0.1 and avg_speed_mm_s < 0.3"
+      meaning: "线虫表现出正常的爬行速度"
+    - name: "运动能力活跃"
+      condition: "avg_speed_mm_s >= 0.3"
+      meaning: "线虫移动迅速，表现出强烈的运动活性"
+
+  bending_levels:
+    - name: "弯曲频率低"
+      condition: "body_bend_frequency < 0.3"
+      meaning: "身体摆动较少，可能与运动协调性下降有关"
+    - name: "弯曲频率正常"
+      condition: "body_bend_frequency >= 0.3 and body_bend_frequency < 0.8"
+      meaning: "身体正弦波爬行模式正常"
+    - name: "弯曲频率高"
+      condition: "body_bend_frequency >= 0.8"
+      meaning: "身体快速摆动，可能处于应激或兴奋状态"
+
+  omega_turn_levels:
+    - name: "无 Omega turn"
+      condition: "omega_turn_count == 0"
+      meaning: "未观察到明显的方向反转行为"
+    - name: "少量 Omega turn"
+      condition: "omega_turn_count > 0 and omega_turn_count <= 3"
+      meaning: "线虫表现出正常的趋避反应"
+    - name: "频繁 Omega turn"
+      condition: "omega_turn_count > 3"
+      meaning: "线虫频繁改变运动方向，可能与化学趋化或应激反应有关"
+
+references:
+  - "Croll, N.A. (1975). Components and patterns in the behaviour of the nematode Caenorhabditis elegans."
+  - "Pierce-Shimomura, J.T. et al. (2008). Genetic analysis of crawling and swimming locomotory patterns in C. elegans."

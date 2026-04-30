@@ -1,0 +1,215 @@
+# Morris Water Maze Protocol v1.3
+# 莫里斯水迷宫实验协议定义
+
+name: morris_water_maze
+version: "1.3"
+description: |
+  莫里斯水迷宫 (Morris Water Maze) 用于评估实验动物的空间学习和记忆能力。
+  动物需要在圆形水池中找到隐藏的平台，通过分析搜索策略和逃逸潜伏期评估认知功能。
+
+species:
+  - mouse
+  - rat
+
+# 实验参数
+parameters:
+  pool_diameter:
+    type: float
+    unit: cm
+    default: 120
+    min: 80
+    max: 200
+    description: "水池直径"
+
+  platform_diameter:
+    type: float
+    unit: cm
+    default: 10
+    min: 6
+    max: 15
+    description: "平台直径"
+
+  platform_position:
+    type: dict
+    required: true
+    properties:
+      x:
+        type: float
+        unit: cm
+      y:
+        type: float
+        unit: cm
+    description: "平台位置 (相对于水池中心)"
+
+  water_temperature:
+    type: float
+    unit: celsius
+    default: 22
+    min: 18
+    max: 26
+    description: "水温"
+
+  max_trial_duration:
+    type: float
+    unit: seconds
+    default: 60
+    min: 30
+    max: 120
+    description: "单次试验最大时长"
+
+  trials_per_day:
+    type: integer
+    default: 4
+    min: 2
+    max: 8
+    description: "每天试验次数"
+
+  training_days:
+    type: integer
+    default: 5
+    min: 3
+    max: 10
+    description: "训练天数"
+
+# 计算指标
+metrics:
+  escape_latency:
+    type: float
+    unit: seconds
+    description: "逃避潜伏期：动物入水后到找到并登上隐藏平台所需时间。随训练天数增加逐渐缩短通常提示空间学习形成；若持续延长，常提示学习受损"
+    min: 0
+    max: "parameters.max_trial_duration"
+
+  path_length:
+    type: float
+    unit: cm
+    description: "游泳路径长度：从起始点到平台的实际游泳轨迹总长度。训练过程中逐渐缩短通常提示定位效率提高；较长路径常提示空间学习效率下降"
+    min: 0
+
+  swim_speed:
+    type: float
+    unit: cm/s
+    description: "游泳速度：总游泳距离 / 总游泳时间。游泳速度下降提示运动能力、体力或视觉/动机因素可能干扰认知结果，不能单独解释为空间记忆缺陷"
+    min: 0
+
+  target_quadrant_time:
+    type: float
+    unit: percent
+    description: "目标象限停留时间占比：撤去平台后目标象限停留时间 / 总测试时间 × 100%。升高通常提示空间记忆较好；若接近随机分布(约25%)，则提示记忆减弱"
+    range: [0, 100]
+
+  platform_crossings:
+    type: integer
+    description: "穿越原平台位置次数 (探测实验)"
+    min: 0
+
+  thigmotaxis:
+    type: float
+    unit: percent
+    description: "边缘游泳时间占比：靠池壁区域停留时间 / 总测试时间 × 100%。增加通常提示焦虑、应激或非空间搜索策略增强，可能掩盖真实学习能力"
+    range: [0, 100]
+
+  search_strategy:
+    type: string
+    enum: [direct, corrected, focal, scanning, chaining, random, thigmotaxis]
+    description: "搜索策略分类"
+
+# 约束 (建议满足)
+hard_constraints:
+  - name: pool_size_valid
+    condition: "parameters.pool_diameter >= 80 and parameters.pool_diameter <= 200"
+    message: "水池直径必须在 80-200 cm 之间"
+
+  - name: platform_size_valid
+    condition: "parameters.platform_diameter >= 6 and parameters.platform_diameter <= 15"
+    message: "平台直径必须在 6-15 cm 之间"
+
+  - name: water_temperature_valid
+    condition: "parameters.water_temperature >= 18 and parameters.water_temperature <= 26"
+    message: "水温必须在 18-26°C 之间"
+
+  - name: trial_duration_valid
+    condition: "parameters.max_trial_duration >= 30 and parameters.max_trial_duration <= 120"
+    message: "单次试验时长必须在 30-120 秒之间"
+
+  - name: detection_rate_sufficient
+    condition: "quality.detection_rate >= 0.85"
+    message: "检测率必须 >= 85%"
+
+  - name: tracking_continuous
+    condition: "quality.track_continuity >= 0.8"
+    message: "跟踪连续性必须 >= 80%"
+
+soft_constraints:
+  - name: sufficient_training
+    condition: "parameters.training_days >= 4"
+    message: "建议至少进行 4 天训练"
+    severity: warning
+
+  - name: detection_rate_optimal
+    condition: "quality.detection_rate >= 0.95"
+    message: "建议检测率达到 95% 以上"
+    severity: info
+
+# 数据质量要求
+quality_requirements:
+  detection_rate:
+    min: 0.85
+    recommended: 0.95
+
+  track_continuity:
+    min: 0.8
+    recommended: 0.9
+
+  min_tracking_duration:
+    value: 0.9
+    description: "至少 90% 的试验时间有有效跟踪"
+
+# 结果解释
+interpretation:
+  learning_levels:
+    excellent:
+      condition: "metrics.escape_latency < 15"
+      description: "学习优秀：动物能快速定位平台"
+
+    good:
+      condition: "metrics.escape_latency >= 15 and metrics.escape_latency < 30"
+      description: "学习良好：动物表现出明显的空间学习"
+
+    moderate:
+      condition: "metrics.escape_latency >= 30 and metrics.escape_latency < 45"
+      description: "学习中等：动物学习过程正常"
+
+    impaired:
+      condition: "metrics.escape_latency >= 45"
+      description: "学习受损：动物可能存在空间认知障碍"
+
+  search_strategies:
+    direct:
+      description: "直接路径：高效的空间导航"
+    corrected:
+      description: "修正路径：良好的空间定位能力"
+    focal:
+      description: "聚焦搜索：正确的空间记忆"
+    scanning:
+      description: "扫描搜索：部分空间信息"
+    chaining:
+      description: "链式搜索：使用线索策略"
+    random:
+      description: "随机搜索：缺乏空间策略"
+    thigmotaxis:
+      description: "边缘游泳：焦虑或缺乏空间学习"
+
+# 参考文献
+references:
+  - authors: ["Morris R"]
+    title: "Developments of a water-maze procedure for studying spatial learning in the rat"
+    journal: "Journal of Neuroscience Methods"
+    year: 1984
+    doi: "10.1016/0165-0270(84)90107-4"
+
+  - authors: ["Vorhees CV", "Williams MT"]
+    title: "Morris water maze: procedures for assessing spatial and related forms of learning and memory"
+    journal: "Nature Protocols"
+    year: 2006
+    doi: "10.1038/nprot.2006.116"

@@ -1,0 +1,212 @@
+# Elevated Plus Maze Protocol v1.0
+# 高架十字迷宫实验协议定义
+
+name: epm
+version: "1.0"
+description: |
+  高架十字迷宫 (Elevated Plus Maze, EPM) 用于评估实验动物的焦虑状态。
+  基于动物对开放空间的天然厌恶，通过分析动物在开臂和闭臂的时间分布和探索行为评估焦虑水平。
+
+species:
+  - mouse
+  - rat
+
+# 实验参数
+parameters:
+  arm_length:
+    type: float
+    unit: cm
+    default: 30
+    min: 20
+    max: 50
+    description: "臂长度"
+
+  arm_width:
+    type: float
+    unit: cm
+    default: 5
+    min: 3
+    max: 10
+    description: "臂宽度"
+
+  center_size:
+    type: float
+    unit: cm
+    default: 5
+    min: 3
+    max: 10
+    description: "中央区尺寸 (与臂宽度相同)"
+
+  maze_height:
+    type: float
+    unit: cm
+    default: 50
+    min: 30
+    max: 80
+    description: "迷宫离地高度"
+
+  duration:
+    type: float
+    unit: seconds
+    default: 300
+    min: 60
+    max: 600
+    description: "实验时长"
+
+  lighting:
+    type: string
+    default: normal
+    enum: [low, normal, high]
+    description: "光照条件"
+
+# 计算指标
+metrics:
+  open_arm_time_percent:
+    type: float
+    unit: percent
+    description: "开臂停留时间占比"
+    range: [0, 100]
+
+  open_arm_entry_percent:
+    type: float
+    unit: percent
+    description: "开臂进入次数占比"
+    range: [0, 100]
+
+  closed_arm_time_percent:
+    type: float
+    unit: percent
+    description: "闭臂停留时间占比"
+    range: [0, 100]
+
+  center_time_percent:
+    type: float
+    unit: percent
+    description: "中央区停留时间占比"
+    range: [0, 100]
+
+  open_arm_entries:
+    type: integer
+    description: "开臂进入次数"
+    min: 0
+
+  closed_arm_entries:
+    type: integer
+    description: "闭臂进入次数"
+    min: 0
+
+  total_distance:
+    type: float
+    unit: px
+    description: "总移动距离"
+    min: 0
+
+  avg_speed:
+    type: float
+    unit: px/frame
+    description: "平均移动速度"
+    min: 0
+
+  immobile_time_percent:
+    type: float
+    unit: percent
+    description: "不动时间占比"
+    range: [0, 100]
+
+# 约束 (建议满足)
+hard_constraints:
+  - name: duration_valid
+    condition: "parameters.duration >= 60 and parameters.duration <= 600"
+    message: "实验时长必须在 60-600 秒之间"
+
+  - name: arm_dimensions_valid
+    condition: "parameters.arm_length >= 20 and parameters.arm_width >= 3"
+    message: "臂长度必须 >= 20cm，臂宽度必须 >= 3cm"
+
+  - name: detection_rate_sufficient
+    condition: "quality.detection_rate >= 0.8"
+    message: "检测率必须 >= 80%"
+
+  - name: tracking_continuous
+    condition: "quality.track_continuity >= 0.7"
+    message: "跟踪连续性必须 >= 70%"
+
+soft_constraints:
+  - name: duration_optimal
+    condition: "parameters.duration >= 300"
+    message: "建议实验时长至少 300 秒 (5分钟)"
+    severity: info
+
+  - name: detection_rate_optimal
+    condition: "quality.detection_rate >= 0.9"
+    message: "建议检测率达到 90% 以上"
+    severity: info
+
+# 数据质量要求
+quality_requirements:
+  detection_rate:
+    min: 0.8
+    recommended: 0.9
+
+  track_continuity:
+    min: 0.7
+    recommended: 0.85
+
+  min_tracking_duration:
+    value: 0.8
+    description: "至少 80% 的实验时间有有效跟踪"
+
+# 结果解释
+interpretation:
+  anxiety_levels:
+    low_anxiety:
+      condition: "metrics.open_arm_time_percent >= 30"
+      description: "低焦虑：动物在开臂探索较多，焦虑水平较低"
+
+    moderate_anxiety:
+      condition: "metrics.open_arm_time_percent >= 15 and metrics.open_arm_time_percent < 30"
+      description: "中等焦虑：动物表现出一定程度的焦虑回避行为"
+
+    high_anxiety:
+      condition: "metrics.open_arm_time_percent < 15"
+      description: "高焦虑：动物主要在闭臂活动，极少探索开臂"
+
+  activity_levels:
+    low_activity:
+      condition: "metrics.total_distance < 2000"
+      description: "低活动性：动物运动量较少"
+
+    normal_activity:
+      condition: "metrics.total_distance >= 2000 and metrics.total_distance < 8000"
+      description: "正常活动性：动物运动量正常"
+
+    high_activity:
+      condition: "metrics.total_distance >= 8000"
+      description: "高活动性：动物运动量较大"
+
+  exploration_levels:
+    low_exploration:
+      condition: "metrics.open_arm_entry_percent < 20"
+      description: "探索性低：动物较少进入开臂"
+
+    normal_exploration:
+      condition: "metrics.open_arm_entry_percent >= 20 and metrics.open_arm_entry_percent < 50"
+      description: "探索性正常"
+
+    high_exploration:
+      condition: "metrics.open_arm_entry_percent >= 50"
+      description: "探索性高：动物频繁进入开臂"
+
+# 参考文献
+references:
+  - authors: ["Pellow S", "Chopin P", "File SE", "Briley M"]
+    title: "Validation of open:closed arm entries in an elevated plus-maze as a measure of anxiety in the rat"
+    journal: "Journal of Neuroscience Methods"
+    year: 1985
+    doi: "10.1016/0165-0270(85)90031-7"
+
+  - authors: ["Walf AA", "Frye CA"]
+    title: "The use of the elevated plus maze as an assay of anxiety-related behavior in rodents"
+    journal: "Nature Protocols"
+    year: 2007
+    doi: "10.1038/nprot.2007.99"

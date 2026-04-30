@@ -1,0 +1,119 @@
+name: "zebrafish_plate"
+display_name: "斑马鱼孔板实验"
+description: "斑马鱼 (Danio rerio) 多孔板行为分析协议，用于药物筛选和运动表型评估"
+version: "1.0.0"
+
+parameters:
+  plate_type:
+    type: string
+    default: "96"
+    description: "孔板类型 (6/24/96孔)"
+  well_diameter:
+    type: float
+    default: 6.0
+    unit: mm
+    description: "单孔直径"
+  temperature:
+    type: float
+    default: 28.0
+    unit: "°C"
+    description: "实验环境温度"
+  duration:
+    type: float
+    default: 600.0
+    unit: s
+    description: "视频录制时长"
+
+species:
+  - zebrafish
+
+metrics:
+  avg_speed:
+    name: "平均速度"
+    unit: mm/s
+    description: "斑马鱼游动平均速度"
+    direction: "higher_is_better"
+    reference_range: [2.0, 8.0]
+
+  max_speed:
+    name: "最大速度"
+    unit: mm/s
+    description: "斑马鱼游动最大瞬时速度"
+    direction: "higher_is_better"
+
+  total_distance:
+    name: "总移动距离"
+    unit: mm
+    description: "实验期间的总游动距离"
+    direction: "higher_is_better"
+
+  immobile_time_percent:
+    name: "静止时间占比"
+    unit: "%"
+    description: "速度低于阈值的帧数占比"
+    direction: "lower_is_better"
+    reference_range: [0, 30]
+
+  edge_time_percent:
+    name: "边缘区时间占比"
+    unit: "%"
+    description: "停留在边缘区域的时间占比（趋触性指标）"
+    direction: "lower_is_better"
+    reference_range: [10, 40]
+
+  crossing_count:
+    name: "穿越次数"
+    unit: "次"
+    description: "中心区与边缘区之间的穿越次数"
+    direction: "higher_is_better"
+    reference_range: [2, 10]
+
+constraints:
+  hard:
+    detection_rate:
+      operator: ">="
+      value: 0.85
+      message: "检测率不足 85%，请检查视频质量或斑马鱼可见性"
+  soft:
+    track_continuity:
+      operator: ">="
+      value: 0.80
+      message: "跟踪连续性偏低，可能导致轨迹断裂"
+
+interpretation:
+  activity_levels:
+    - name: "运动能力低下"
+      condition: "avg_speed_mm_s < 2.0"
+      meaning: "斑马鱼游动缓慢，可能存在药物抑制作用或神经系统功能障碍"
+    - name: "运动能力正常"
+      condition: "avg_speed_mm_s >= 2.0 and avg_speed_mm_s < 8.0"
+      meaning: "斑马鱼表现出正常的游动速度"
+    - name: "运动能力活跃"
+      condition: "avg_speed_mm_s >= 8.0"
+      meaning: "斑马鱼游动迅速，表现出强烈的运动活性"
+
+  stress_levels:
+    - name: "低应激"
+      condition: "edge_time_percent <= 30"
+      meaning: "斑马鱼在场地中分布均匀，没有明显的边缘焦虑"
+    - name: "中等应激"
+      condition: "edge_time_percent > 30 and edge_time_percent <= 50"
+      meaning: "斑马鱼有一定程度的边缘偏好，应激水平中等"
+    - name: "高应激"
+      condition: "edge_time_percent > 50"
+      meaning: "斑马鱼长时间停留在边缘区域，表现出强烈的趋触性（thigmotaxis），可能与焦虑或应激反应有关"
+
+  exploration_levels:
+    - name: "探索行为低下"
+      condition: "crossing_count < 2"
+      meaning: "斑马鱼很少在中心区和边缘区之间穿梭，探索意愿低"
+    - name: "探索行为正常"
+      condition: "crossing_count >= 2 and crossing_count < 6"
+      meaning: "斑马鱼表现出正常的空间探索行为"
+    - name: "探索行为活跃"
+      condition: "crossing_count >= 6"
+      meaning: "斑马鱼频繁在不同区域间穿梭，探索意愿强烈"
+
+references:
+  - "Kalueff, A.V. et al. (2013). Zebrafish neurobehavioral phenomics."
+  - "Norton, W.H.J. (2013). Toward developmental models of psychiatric disorders in zebrafish."
