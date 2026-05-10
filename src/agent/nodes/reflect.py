@@ -99,10 +99,12 @@ def _get_interpretation_schema(experiment_type: str | None) -> str:
 - motor_level: 运动能力（运动能力活跃/正常/低下）
 - motor_description: 运动能力描述""",
         "epm": """
-- anxiety_level: 焦虑水平（高/中/低）
+- anxiety_level: 焦虑水平（高焦虑/中等焦虑/低焦虑）
 - anxiety_description: 焦虑水平描述
-- activity_level: 活动水平（高/中/低）
-- activity_description: 活动水平描述""",
+- activity_level: 活动水平（低活动性/正常活动/高活动性）
+- activity_description: 活动水平描述
+- exploration_level: 探索水平（低探索/中等探索/高探索）
+- exploration_description: 探索水平描述""",
         "worm_assay": """
 - activity_level: 运动能力（运动能力低下/正常/活跃）
 - activity_description: 运动能力描述
@@ -299,6 +301,9 @@ def _generate_interpretation_rules(state: ExperimentState, result) -> dict:
         return _interpret_open_field(metrics)
     elif state.experiment_type == "morris_water_maze":
         return _interpret_water_maze(metrics)
+    elif state.experiment_type == "epm":
+        from ...tools.calculate import _interpret_epm
+        return _interpret_epm(metrics)
     elif state.experiment_type == "worm_assay":
         return _interpret_worm(metrics)
     elif state.experiment_type == "zebrafish_plate":

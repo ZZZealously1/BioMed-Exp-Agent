@@ -671,23 +671,11 @@ def _execute_epm_metrics(state: ExperimentState) -> ToolResult:
     # 转换轨迹格式
     trajectories = tracks_to_trajectories(track_history)
 
-    # EPM 场地配置
-    # 十字迷宫参数 (可根据实际设备调整)
-    arena_width = video_info.get("width", 1280)
-    arena_height = video_info.get("height", 960)
-
-    arena_config = {
-        "width": arena_width,
-        "height": arena_height,
-        "arm_width": arena_width * 0.15,   # 臂宽度约15%
-        "arm_length": arena_width * 0.4,   # 臂长度约40%
-    }
-
-    # 计算指标
+    # 计算指标（场地参数由 calculate.py 根据轨迹自动推断）
     result = calculate_metrics(
         trajectories,
         "epm",
-        arena_config=arena_config,
+        arena_config=None,
         fps=video_info.get("fps", 25.0)
     )
 
