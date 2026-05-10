@@ -79,32 +79,80 @@ uvicorn src.api.main:app --reload --port 8000
 5. **导出 PDF**: 下载 HTML 报告后用浏览器打印为 PDF
 6. **追问分析**: 在"追问对话"Tab 中用自然语言深入探索数据
 
+## 运行效果
+
+系统提供多个功能，支持从不同维度查看和交互分析结果：
+
+<p align="center">
+  <img src="oft_result.png" width="80%" alt="旷场实验分析指标"/>
+  <br/>
+  <sub>分析指标 — 旷场实验行为指标汇总与解读</sub>
+</p>
+
+<p align="center">
+  <img src="epm_result.png" width="80%" alt="高架十字迷宫实验结果解释"/>
+  <br/>
+  <sub>结果解释 — 高架十字迷宫实验结果分析与意义说明</sub>
+</p>
+
+<p align="center">
+  <img src="mwm_result.png" width="80%" alt="莫里斯水迷宫实验追问对话"/>
+  <br/>
+  <sub>追问对话 — 莫里斯水迷宫实验的交互式追问与回答</sub>
+</p>
+
+<p align="center">
+  <img src="worm_result.png" width="80%" alt="线虫平板实验审计日志"/>
+  <br/>
+  <sub>审计日志 — 线虫实验完整执行记录与质量评估</sub>
+</p>
+
+<p align="center">
+  <img src="zebrafish_result.png" width="80%" alt="斑马鱼孔板实验原始轨迹"/>
+  <br/>
+  <sub>原始轨迹 — 斑马鱼孔板实验运动轨迹</sub>
+</p>
+
+<p align="center">
+  <img src="trajectory_plot.png" width="80%" alt="运动轨迹图"/>
+  <br/>
+  <sub>可视化 — 运动轨迹图</sub>
+</p>
+
+<p align="center">
+  <img src="heatmap.png" width="80%" alt="空间密度热力图"/>
+  <br/>
+  <sub>可视化 — 空间密度热力图</sub>
+</p>
+
 ## 项目结构
 
 ```
 biomed-exp-agent/
 ├── src/
 │   ├── agent/          # LangGraph 工作流 (感知-规划-执行-反思)
-│   │   ├── nodes/      # 工作流节点
+│   │   ├── nodes/      # 工作流节点 (perceive, plan, execute, reflect)
 │   │   ├── memory/     # 长期记忆存储 (SQLite)
 │   │   └── prompts/    # LLM Prompt 模板
-│   ├── tools/          # 分析工具
+│   ├── tools/          # 分析工具链
 │   │   ├── detect.py   # 目标检测 (YOLO / 颜色阈值)
-│   │   ├── track.py    # 目标跟踪 (SORT)
+│   │   ├── track.py    # 目标跟踪 (SORT / 孔位分割跟踪)
 │   │   ├── segment.py  # SAM 图像分割
+│   │   ├── skeleton.py # 线虫骨架提取
 │   │   ├── calculate.py # 行为指标计算
-│   │   ├── visualize.py # 轨迹图 / 热力图
+│   │   ├── visualize.py # 轨迹图 / 热力图 / 场地叠加
 │   │   ├── report.py   # 报告生成 (Markdown / HTML)
-│   │   └── followup.py # 追问计算工具
-│   ├── scientific/     # 科学约束与审计
+│   │   ├── followup.py # 追问对话计算工具
+│   │   ├── quality.py  # 质量评估器
+│   │   └── server.py   # 工具服务封装
+│   ├── scientific/     # 科学约束验证与审计日志
 │   ├── llm/            # LLM 客户端封装
 │   ├── api/            # FastAPI 服务
 │   └── ui/             # Gradio Web 界面
-├── tests/              # 测试套件
 ├── notebooks/          # Jupyter 调试
 ├── docs/               # 文档
 ├── data/               # 本地数据 (SQLite 记忆库)
-├── weights/            # 模型权重 (YOLO)
+├── weights/            # 模型权重 (YOLO / SAM)
 └── videos/             # 实验视频
 ```
 
@@ -114,7 +162,7 @@ biomed-exp-agent/
 |------|------|
 | Agent 框架 | LangGraph (感知-规划-执行-反思循环) |
 | LLM 提供商 | GLM (智谱 AI)、Kimi (Moonshot) |
-| 目标检测 | YOLOv8、颜色阈值法 (MWM) |
+| 目标检测 | YOLO26、颜色阈值法 (MWM) |
 | 目标跟踪 | SORT |
 | 图像分割 | SAM (Segment Anything) |
 | 记忆层 | SQLite + SQLModel |
