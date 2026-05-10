@@ -217,13 +217,12 @@ def _calculate_open_field_metrics(input_data: CalculateInput) -> tuple[dict, dic
     x_min, x_max = np.min(x_coords), np.max(x_coords)
     y_min, y_max = np.min(y_coords), np.max(y_coords)
 
-    # 估计场地尺寸（轨迹范围 + 20% 边距）
+    # 场地尺寸：以小鼠实际到达的边界为准
     trajectory_width = x_max - x_min
     trajectory_height = y_max - y_min
-    margin = 0.1  # 10% 边距
 
-    arena_width = arena_config.get("width", trajectory_width / (1 - 2 * margin))
-    arena_height = arena_config.get("height", trajectory_height / (1 - 2 * margin))
+    arena_width = arena_config.get("width", trajectory_width)
+    arena_height = arena_config.get("height", trajectory_height)
     center_ratio = arena_config.get("center_ratio", 0.3)
 
     # 计算场地中心（基于轨迹中心，而非视频中心）
@@ -236,18 +235,24 @@ def _calculate_open_field_metrics(input_data: CalculateInput) -> tuple[dict, dic
     # 边缘区域宽度
     edge_width = min(arena_width, arena_height) * 0.15
 
+    # 可视化用的场地边界：始终以小鼠实际到达的轨迹边界为准
+    bounds_x_min, bounds_x_max = float(x_min), float(x_max)
+    bounds_y_min, bounds_y_max = float(y_min), float(y_max)
+
     arena_info = {
-        "width": round(arena_width, 2),
-        "height": round(arena_height, 2),
-        "center_x": round(arena_center_x, 2),
-        "center_y": round(arena_center_y, 2),
+        # 可视化边界：直接贴合轨迹
+        "width": round(bounds_x_max - bounds_x_min, 2),
+        "height": round(bounds_y_max - bounds_y_min, 2),
+        "center_x": round((bounds_x_min + bounds_x_max) / 2, 2),
+        "center_y": round((bounds_y_min + bounds_y_max) / 2, 2),
+        # 指标计算参数
         "center_radius": round(center_radius, 2),
         "edge_width": round(edge_width, 2),
         "trajectory_bounds": {
-            "x_min": round(x_min, 2),
-            "x_max": round(x_max, 2),
-            "y_min": round(y_min, 2),
-            "y_max": round(y_max, 2)
+            "x_min": round(bounds_x_min, 2),
+            "x_max": round(bounds_x_max, 2),
+            "y_min": round(bounds_y_min, 2),
+            "y_max": round(bounds_y_max, 2)
         }
     }
 
@@ -286,16 +291,6 @@ def _calculate_open_field_metrics(input_data: CalculateInput) -> tuple[dict, dic
     # 7. 平均到中心距离
     avg_distance_to_center = np.mean(distances_from_center)
 
-    # 8. 轨迹效率 (直线距离 / 实际距离)
-    if len(positions) > 1:
-        straight_distance = np.sqrt(
-            (x_coords[-1] - x_coords[0]) ** 2 +
-            (y_coords[-1] - y_coords[0]) ** 2
-        )
-        path_efficiency = straight_distance / total_distance if total_distance > 0 else 1.0
-    else:
-        path_efficiency = 1.0
-
     metrics = {
         # 时间指标
         "center_time_percent": round(center_time_percent, 2),
@@ -310,9 +305,6 @@ def _calculate_open_field_metrics(input_data: CalculateInput) -> tuple[dict, dic
         "total_distance": round(total_distance, 2),
         "avg_speed": round(avg_speed, 2),
         "max_speed": round(max_speed, 2),
-
-        # 效率指标
-        "path_efficiency": round(path_efficiency, 4)
     }
 
     # 添加真实单位 (假设 1 像素 = 0.1 cm，可根据实际调整)
@@ -505,34 +497,49 @@ def _calculate_epm_metrics(input_data: CalculateInput) -> tuple[dict, dict]:
     x_min, x_max = np.min(x_coords), np.max(x_coords)
     y_min, y_max = np.min(y_coords), np.max(y_coords)
 
-    # EPM 场地参数
-    arena_width = arena_config.get("width", x_max - x_min + 100)
-    arena_height = arena_config.get("height", y_max - y_min + 100)
+    # 可视化边界：以小鼠实际到达的轨迹边界为准
+    bounds_width = x_max - x_min
+    bounds_height = y_max - y_min
+    bounds_cx = (x_min + x_max) / 2
+    bounds_cy = (y_min + y_max) / 2
 
-    # 中心点
-    center_x = arena_width / 2
-    center_y = arena_height / 2
+    # 硬编码 EPM 场地范围（用户标注：x 220-980, y 200-780）
+    _arena_x_min, _arena_x_max = 220, 980
+    _arena_y_min, _arena_y_max = 200, 780
+    _arena_width = _arena_x_max - _arena_x_min   # 760
+    _arena_height = _arena_y_max - _arena_y_min  # 580
+    _center_x = (_arena_x_min + _arena_x_max) / 2  # 600
+    _center_y = (_arena_y_min + _arena_y_max) / 2  # 490
 
-    # 臂的尺寸 (假设十字形对称)
-    arm_width = arena_config.get("arm_width", arena_width * 0.15)  # 臂宽度约15%
-    arm_length = arena_config.get("arm_length", arena_width * 0.4)  # 臂长度约40%
+    # 指标计算用的场地参数（若配置中有则用配置值，否则用硬编码默认值）
+    arena_width = arena_config.get("width", _arena_width)
+    arena_height = arena_config.get("height", _arena_height)
+    center_x = arena_config.get("center_x", _center_x)
+    center_y = arena_config.get("center_y", _center_y)
+
+    # 臂的尺寸（用户标注臂宽约80像素，臂长直接由标注边界推算）
+    _arm_width = 80
+    # 用户标注 x:220-980, y:200-780 即臂端点，臂长 = (总跨度 - 中央区) / 2
+    _arm_length = (max(_arena_width, _arena_height) - _arm_width) / 2   # (760-80)/2 = 340
+
+    arm_width = arena_config.get("arm_width", _arm_width)
+    arm_length = arena_config.get("arm_length", _arm_length)
 
     # 中央区尺寸
     center_size = arm_width  # 中央区与臂宽度相同
 
     arena_info = {
-        "width": round(arena_width, 2),
-        "height": round(arena_height, 2),
-        "center_x": round(center_x, 2),
-        "center_y": round(center_y, 2),
+        # 十字高架场地参数
+        "center_x": round(_center_x, 2),
+        "center_y": round(_center_y, 2),
         "arm_width": round(arm_width, 2),
         "arm_length": round(arm_length, 2),
         "center_size": round(center_size, 2),
         "trajectory_bounds": {
-            "x_min": round(x_min, 2),
-            "x_max": round(x_max, 2),
-            "y_min": round(y_min, 2),
-            "y_max": round(y_max, 2)
+            "x_min": round(float(x_min), 2),
+            "x_max": round(float(x_max), 2),
+            "y_min": round(float(y_min), 2),
+            "y_max": round(float(y_max), 2)
         }
     }
 

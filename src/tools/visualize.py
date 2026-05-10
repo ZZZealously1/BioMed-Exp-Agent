@@ -264,7 +264,7 @@ def _draw_arena_overlay(
 
 
 def _draw_open_field_arena(ax, arena_info: dict, fill: bool, alpha: float):
-    """绘制旷场实验场地"""
+    """绘制旷场实验场地（矩形场地）"""
     cx = arena_info.get("center_x", 0)
     cy = arena_info.get("center_y", 0)
     center_radius = arena_info.get("center_radius", 0)
@@ -274,18 +274,21 @@ def _draw_open_field_arena(ax, arena_info: dict, fill: bool, alpha: float):
     h = arena_info.get("height", 0)
     arena_radius = min(w, h) / 2
 
-    # 整个场地圆
-    arena_circle = plt.Circle((cx, cy), arena_radius, fill=False,
-                               edgecolor='gray', linewidth=1.5, linestyle='-')
-    ax.add_patch(arena_circle)
+    # 整个场地：矩形轮廓
+    half_w = w / 2
+    half_h = h / 2
+    ax.add_patch(patches.Rectangle(
+        (cx - half_w, cy - half_h), w, h,
+        fill=False, edgecolor='gray', linewidth=1.5, linestyle='-'
+    ))
 
-    # 中心区
+    # 中心区：圆形
     center_circle = plt.Circle((cx, cy), center_radius, fill=fill,
                                 facecolor='green', edgecolor='green',
                                 linestyle='--', linewidth=1.0, alpha=alpha)
     ax.add_patch(center_circle)
 
-    # 边缘带 (外圆 - 内圆)
+    # 边缘带内边界：圆形（与指标计算逻辑一致）
     if edge_width > 0:
         edge_inner = plt.Circle((cx, cy), arena_radius - edge_width, fill=False,
                                  edgecolor='orange', linestyle=':', linewidth=1.0, alpha=alpha)

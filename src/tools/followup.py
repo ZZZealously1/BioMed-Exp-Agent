@@ -107,7 +107,7 @@ FOLLOWUP_TOOLS = [
         "type": "function",
         "function": {
             "name": "zone_entries",
-            "description": "计算动物进入某区域的次数和每次进入的时刻/持续时长",
+            "description": "计算动物进入某区域的全部历史记录，包括首次/末次进入时间、每次进入时刻、持续时长和总次数。可用于回答'最后一次进入某区域是什么时候''共进入几次'等问题。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -338,15 +338,22 @@ def _tool_zone_entries(args, positions, frame_indices, fps, arena_info, experime
     if not entries:
         return f"动物未进入区域 '{zone}'"
 
-    result_parts = [f"动物进入 '{zone}' 区域共 {len(entries)} 次:"]
+    total_time = sum(e["duration"] for e in entries)
+    first = entries[0]
+    last = entries[-1]
+
+    result_parts = [
+        f"动物进入 '{zone}' 区域共 {len(entries)} 次，总停留 {total_time:.2f}s:",
+        f"  首次进入: {first['entry_time']:.2f}s (持续 {first['duration']:.2f}s)",
+        f"  末次进入: {last['entry_time']:.2f}s (持续 {last['duration']:.2f}s)",
+        f"  详细记录:"
+    ]
     for idx, e in enumerate(entries):
+        exit_time = e['entry_time'] + e['duration']
         result_parts.append(
-            f"  第{idx + 1}次: {e['entry_time']:.2f}s 进入, "
+            f"    第{idx + 1}次: {e['entry_time']:.2f}s 进入 → {exit_time:.2f}s 离开, "
             f"持续 {e['duration']:.2f}s ({e['frames']} 帧)"
         )
-
-    total_time = sum(e["duration"] for e in entries)
-    result_parts.append(f"  总停留时间: {total_time:.2f}s")
 
     return "\n".join(result_parts)
 
