@@ -178,6 +178,3 @@ temp/
 # LangGraph
 .langgraph/
 
-# Claude Code
-.claude/
-noble-chasing-music.md
